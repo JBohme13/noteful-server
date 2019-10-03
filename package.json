@@ -12,13 +12,16 @@
     "migrate": "postgrator --config postgrator-config.js"
   },
   "keywords": [],
+  "engines": {
+    "node": "10.15.3"
+  },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^8.0.0",
     "express": "^4.17.1",
-    "helmet": "^3.20.0",
+    "helmet": "^3.21.1",
     "knex": "^0.19.4",
     "morgan": "^1.9.1",
     "pg": "^7.12.1",

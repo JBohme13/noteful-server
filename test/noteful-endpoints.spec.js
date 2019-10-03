@@ -8,7 +8,7 @@ describe('Noteful endpoints', function() {
     before('make knex instance', () => {
         db = knex({
             client: 'pg',
-            connection: process.env.TEST_DB_URL,
+            connection: process.env.TEST_DATABASE_URL,
         })
         app.set('db', db)
     })
@@ -17,7 +17,7 @@ describe('Noteful endpoints', function() {
 
     before('clean the table', () => db.raw('TRUNCATE notes, folders RESTART IDENTITY CASCADE'))
 
-    this.afterEach('cleanup', () => db.raw('TRUNCATE notes, folders RESTART IDENTITY CASCADE'))
+    afterEach('cleanup', () => db.raw('TRUNCATE notes, folders RESTART IDENTITY CASCADE'))
 
     describe(`GET /api/folders`, () => {
         context('Given no folders', () => {
@@ -34,7 +34,7 @@ describe('Noteful endpoints', function() {
             beforeEach('insert folders', () => {
                 return db
                   .into('folders')
-                  .insert(testfolders)
+                  .insert(testFolders)
             })
 
             it(`responds with 200 and all of the folders`, () => {
@@ -55,12 +55,18 @@ describe('Noteful endpoints', function() {
         })
 
         context(`Given notes in db`, () => {
+            const testFolders = makeFoldersArray();
             const testNotes = makeNotesArray();
 
-            beforeEach('insert notes', () => {
+            beforeEach('insert folders and notes', () => {
                 return db
-                    .into('notes')
-                    .insert(testNotes)
+                    .into('folders')
+                    .insert(testFolders)
+                    .then(() => {
+                        return db
+                          .into('notes')
+                          .insert(testNotes)
+                    })
             })
 
             it(`responds with 200 and all notes`, () => {
@@ -71,28 +77,28 @@ describe('Noteful endpoints', function() {
         })
 
         context(`Given an XSS attack note`, () => {
-            const testNotes = makeNotesArray();
-            const { maliciosNote, expectedNote } = makeMaliciosNote();
-
-            beforeEach('insert malicios note', () => {
-                return db
-                   ,into('notes')
-                   .insert(testNotes)
-                   .then(() => {
-                       return db
-                           .into('notes')
-                           .insert([maliciosNote])
-                   })
+            const testFolders = makeFoldersArray();
+            const { maliciousNote, expectedNote } = makeMaliciosNote()
+      
+            beforeEach('insert malicious article', () => {
+              return db
+                .into('folders')
+                .insert(testFolders)
+                .then(() => {
+                  return db
+                    .into('notes')
+                    .insert([ maliciousNote ])
+                })
             })
-
+      
             it('removes XSS attack content', () => {
-                return supertest(app)
-                    .get(`/api/notes`)
-                    .expect(200)
-                    .expect(res => {
-                        expect(res.body[0].name).to.eql(expectedNote.name)
-                        expect(res.body[0].content).to.eql(expectedNote.content)
-                    })
+              return supertest(app)
+                .get(`/api/notes`)
+                .expect(200)
+                .expect(res => {
+                  expect(res.body[0].name).to.eql(expectedNote.name)
+                  expect(res.body[0].content).to.eql(expectedArticle.content)
+                })
             })
         })
     })
@@ -118,7 +124,7 @@ describe('Noteful endpoints', function() {
 
             it('responds with 200 and specified folder', () => {
                 const folderId = 2
-                const expectedFolder = testFolders[folderId -1]
+                const expectedFolder = testFolders[folderId - 1]
                 return supertest(app)
                     .get(`/api/folders/${folderId}`)
                     .expect(200, expectedFolder)
@@ -138,16 +144,22 @@ describe('Noteful endpoints', function() {
 
         context('Given notes in db', () => {
             const testNotes = makeNotesArray();
+            const testFolders = makeFoldersArray();
 
-            beforeEach('insert Notes', () => {
+            beforeEach('insert folders and notes', () => {
                 return db
-                    .into('notes')
-                    .insert(testNotes)
+                    .into('folders')
+                    .insert(testFolders)
+                    .then(() => {
+                        return db
+                          .into('notes')
+                          .insert(testNotes)
+                    })
             })
 
             it(`responds with 200 and specified note`, () => {
                 const noteId = 2
-                const expectedNote = testNotes[noteId -1]
+                const expectedNote = testNotes[1]
                 return supertest(app)
                     .get(`/api/notes/${noteId}`)
                     .expect(200, expectedNote)
@@ -156,20 +168,27 @@ describe('Noteful endpoints', function() {
 
         context(`Given an XSS attack note`, () => {
             const testNotes = makeNotesArray();
-            const { maliciosNote, expectedNote } = makeMaliciosNote();
+            const testFolders = makeFoldersArray();
+            const { maliciosNote } = makeMaliciosNote();
 
-            beforeEach('insert malicios note', () => {
+            beforeEach('insert folders', () => {
                 return db
-                    .into(notes)
-                    .insert(testNotes)
+                    .into('folders')
+                    .insert(testFolders)
                     .then(() => {
                         return db
-                          .into(notes)
-                          .insert([maliciosNote])
+                          .into('notes')
+                          .insert(testNotes)
+                          .then(() => {
+                              return db
+                                .into('notes')
+                                .insert([maliciosNote])
+                          })
                     })
             })
 
             it(`removes XSS attack content`, () => {
+                const { maliciosNote, expectedNote } = makeMaliciosNote();
                 return supertest(app)
                     .get(`/api/notes/${maliciosNote.id}`)
                     .expect(200)
@@ -195,11 +214,13 @@ describe('Noteful endpoints', function() {
                 name: 'test Folder'
             }
 
-            return superTest(app)
+            return supertest(app)
                 .post('/api/folders')
                 .send(newFolder)
                 .expect(201)
-                .expect(res.body.name).to.eql(newFolder.name)
+                .expect(res => {
+                    expect(res.body.name).to.eql(newFolder.name)
+                })
                 .then(res => {
                     supertest(app)
                       .get(`/api/folders/${res.body.id}`)
@@ -210,11 +231,17 @@ describe('Noteful endpoints', function() {
 
     describe(`POST /api/notes`, () => {
         const testNotes = makeNotesArray();
+        const testFolders = makeFoldersArray();
         
-        beforeEach('insert notes', () => {
-             return db
-                 .into('notes')
-                 .insert(testNotes)
+        beforeEach('insert folders', () => {
+            return db
+                .into('folders')
+                .insert(testFolders)
+                .then(() => {
+                    return db
+                      .into('notes')
+                      .insert(testNotes)
+                })
         })
 
         it(`creates a note, responding with 201 and new note`, () => {
