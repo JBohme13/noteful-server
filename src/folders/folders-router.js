@@ -52,7 +52,6 @@ foldersRouter
       res.json(folder)
   })
   .delete((req, res, next) => {
-      console.log(req.params.folder_id)
       foldersService.deleteFolder(
           req.app.get('db'),
           req.params.folder_id

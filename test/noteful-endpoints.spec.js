@@ -19,7 +19,7 @@ describe('Noteful endpoints', function() {
 
     afterEach('cleanup', () => db.raw('TRUNCATE notes, folders RESTART IDENTITY CASCADE'))
 
-    describe(`GET /api/folders`, () => {
+    /*describe(`GET /api/folders`, () => {
         context('Given no folders', () => {
             it(`responds with 200 and an empty list`, () => {
                 return supertest(app)
@@ -78,7 +78,7 @@ describe('Noteful endpoints', function() {
 
         context(`Given an XSS attack note`, () => {
             const testFolders = makeFoldersArray();
-            const { maliciousNote, expectedNote } = makeMaliciosNote()
+            const { maliciosNote, expectedNote } = makeMaliciosNote()
       
             beforeEach('insert malicious article', () => {
               return db
@@ -87,7 +87,7 @@ describe('Noteful endpoints', function() {
                 .then(() => {
                   return db
                     .into('notes')
-                    .insert([ maliciousNote ])
+                    .insert([ maliciosNote ])
                 })
             })
       
@@ -97,7 +97,7 @@ describe('Noteful endpoints', function() {
                 .expect(200)
                 .expect(res => {
                   expect(res.body[0].name).to.eql(expectedNote.name)
-                  expect(res.body[0].content).to.eql(expectedArticle.content)
+                  expect(res.body[0].content).to.eql(expectedNote.content)
                 })
             })
         })
@@ -111,7 +111,7 @@ describe('Noteful endpoints', function() {
                     .get(`/api/folders/${folderId}`)
                     .expect(404, { error: { message: `Folder doesn't exist` } })
             })
-        })
+        })*/
 
         context(`Given folders in db`, () => {
             const testFolders = makeFoldersArray();
@@ -125,11 +125,12 @@ describe('Noteful endpoints', function() {
             it('responds with 200 and specified folder', () => {
                 const folderId = 2
                 const expectedFolder = testFolders[folderId - 1]
+                console.log(expectedFolder)
                 return supertest(app)
                     .get(`/api/folders/${folderId}`)
                     .expect(200, expectedFolder)
             })
-        })
+        })/*
     })
 
     describe(`GET /api/notes/:note_id`, () => {
@@ -280,5 +281,5 @@ describe('Noteful endpoints', function() {
 
     describe(`DELETE /api/folders`, () => {
         
-    })
+    })*/
 })

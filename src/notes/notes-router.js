@@ -10,7 +10,7 @@ const serializeNotes = note => ({
     id: note.id,
     name: xss(note.name),
     modified: note.modified,
-    folderid: note.folder_id,
+    folderid: note.folderid,
     content: xss(note.content)
 })
 
@@ -28,8 +28,6 @@ notesRouter
       let { name, modified, folderid, content } = req.body
       folderid = parseInt(req.body.folderid)
       let newNote = { name, modified, folderid, content }
-      console.log(req.body)
-      console.log(newNote, 'NEW NOTE LOG')
 
       for (const [key, value] of Object.entries(newNote)) {
         if (value == null) {
@@ -44,7 +42,6 @@ notesRouter
           newNote
         )
         .then(note => {
-            console.log(note, 'RESPONSE NOTE LOG')
             res
               .status(201)
               .location(path.posix.join(req.originalUrl, `/${note.id}`))
@@ -85,6 +82,20 @@ notesRouter
             res.status(204).end()
         })
         .catch(next)
+  })
+  .patch(jsonParser, (req, res, next) => {
+      const { name, content, modified } = req.body
+      const noteToUpdate = { name, content, modified }
+
+      notesService.updateNote(
+          req.app.get('db'),
+          req.params.note_id,
+          noteToUpdate
+      )
+      .then(numRowsAffected => {
+        res.status(204).end()
+      })
+      .catch(next)
   })
 
   module.exports = notesRouter
