@@ -47,9 +47,7 @@ notesRouter
               .location(path.posix.join(req.originalUrl, `/${note.id}`))
               .json(serializeNotes(note))
         })
-        .catch(err => {
-            next()
-        })
+        .catch(next)
   })
 
 notesRouter

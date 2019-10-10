@@ -19,7 +19,7 @@ describe('Noteful endpoints', function() {
 
     afterEach('cleanup', () => db.raw('TRUNCATE notes, folders RESTART IDENTITY CASCADE'))
 
-    /*describe(`GET /api/folders`, () => {
+    describe(`GET /api/folders`, () => {
         context('Given no folders', () => {
             it(`responds with 200 and an empty list`, () => {
                 return supertest(app)
@@ -111,7 +111,7 @@ describe('Noteful endpoints', function() {
                     .get(`/api/folders/${folderId}`)
                     .expect(404, { error: { message: `Folder doesn't exist` } })
             })
-        })*/
+        })
 
         context(`Given folders in db`, () => {
             const testFolders = makeFoldersArray();
@@ -125,12 +125,11 @@ describe('Noteful endpoints', function() {
             it('responds with 200 and specified folder', () => {
                 const folderId = 2
                 const expectedFolder = testFolders[folderId - 1]
-                console.log(expectedFolder)
                 return supertest(app)
                     .get(`/api/folders/${folderId}`)
                     .expect(200, expectedFolder)
             })
-        })/*
+        })
     })
 
     describe(`GET /api/notes/:note_id`, () => {
@@ -202,14 +201,6 @@ describe('Noteful endpoints', function() {
     })
 
     describe(`POST /api/folders`, () => {
-        const testFolders = makeFoldersArray();
-
-        beforeEach('insert folders', () => {
-            return db
-              .into('folders')
-              .insert(testFolders)
-        })
-
         it(`creates a folder, responding with 201 and new folder`, () => {
             const newFolder = {
                 name: 'test Folder'
@@ -231,25 +222,19 @@ describe('Noteful endpoints', function() {
     })
 
     describe(`POST /api/notes`, () => {
-        const testNotes = makeNotesArray();
         const testFolders = makeFoldersArray();
         
         beforeEach('insert folders', () => {
             return db
                 .into('folders')
                 .insert(testFolders)
-                .then(() => {
-                    return db
-                      .into('notes')
-                      .insert(testNotes)
-                })
         })
 
         it(`creates a note, responding with 201 and new note`, () => {
             const newNote = {
                 name: 'test note',
                 modified: '2019-01-03T00:00:00.000Z',
-                folderId: '2',
+                folderid: '2',
                 content: 'test content'
             }
 
@@ -263,6 +248,11 @@ describe('Noteful endpoints', function() {
                     expect(res.body.folderId).to.eql(newNote.folderId)
                     expect(res.body.content).to.eql(newNote.content)
                 })
+                .then(res =>
+                    supertest(app)
+                        .get(`/api/notes/${res.body.id}`)
+                        .expect(res.body)
+                )
         })
 
         it('resmoves XSS attack content', () => {
@@ -280,6 +270,75 @@ describe('Noteful endpoints', function() {
     })
 
     describe(`DELETE /api/folders`, () => {
-        
-    })*/
+        context('given no folders', () => {
+            it('responds with a 404', () => {
+                const folderId = 11
+                return supertest(app)
+                    .delete(`/api/folders/${folderId}`)
+                    .expect(404, { error: { message: `Folder doesn't exist` } })
+            })
+        })
+
+        context('given folders in database', () => {
+            const testFolders = makeFoldersArray();
+                const folderId = 1
+                const expectedFolders = testFolders.filter(folder => folder.id !== folderId)
+
+                beforeEach('insert folders', () => {
+                    return db
+                        .insert(testFolders)
+                        .into('folders')
+                })
+            it('responds with 204 and removes the folder', () => {
+                return supertest(app)
+                    .delete(`/api/folders/${folderId}`)
+                    .expect(204)
+                    .then(() =>
+                        supertest(app)
+                        .get(`/api/folders`)
+                        .expect(expectedFolders)
+                    )
+            })
+        })
+    })
+
+    describe('DELETE /api/notes/note_id', () => {
+        context('given no notes in database', () => {
+            it('responds with 404', () => {
+                const noteId = 12345
+                return supertest(app)
+                    .delete(`/api/notes/${noteId}`)
+                    .expect(404, { error: { message: `Note doesn't exist`} })
+            })
+        })
+
+        context('given notes in database', () => {
+            const testFolders = makeFoldersArray();
+            const testNotes = makeNotesArray();
+            const noteId = 2;
+            const expectedNotes = testNotes.filter(note => note.id !== noteId)
+
+            beforeEach('insert folders and notes', () => {
+                return db
+                    .insert(testFolders)
+                    .into('folders')
+                    .then(() => {
+                        return db
+                            .into('notes')
+                            .insert(testNotes)
+                    })
+            })
+                
+            it('responds with 204 and removes the note', () => {
+                return supertest(app)
+                    .delete(`/api/notes/${noteId}`)
+                    .expect(204)
+                    .then(() =>
+                        supertest(app)
+                            .get(`/api/notes/`)
+                            .expect(expectedNotes)
+                )
+            })
+        })
+    })
 })

@@ -46,10 +46,13 @@ foldersRouter
             res.folder = folder
             next()
         })
-        .catch(next)
+        .catch(err => {
+            console.log(err)
+            next()
+        })
   })
   .get((req, res, next) => {
-      res.json(folder)
+      res.json(res.folder)
   })
   .delete((req, res, next) => {
       foldersService.deleteFolder(
